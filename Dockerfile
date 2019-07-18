@@ -30,6 +30,7 @@ RUN apt-get update \
         libbz2-dev \
         python-pip\
         zlib1g-dev \
+        libmysqlclient-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pyenv
