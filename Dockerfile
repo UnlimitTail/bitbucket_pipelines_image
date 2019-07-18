@@ -1,6 +1,8 @@
 FROM ubuntu:16.04
 MAINTAINER UnlimitTail Pipelines
 
+SHELL ["/bin/bash", "-c"]
+
 # Install base dependencies
 RUN apt-get update \
     && apt-get install -y \
@@ -27,15 +29,28 @@ RUN apt-get update \
         libc6-dev \
         libbz2-dev \
         python-pip\
+        zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install pyenv
+RUN git clone https://github.com/pyenv/pyenv.git ~/.pyenv \
+    && echo 'export PYENV_ROOT="$HOME/.pyenv"' >> ~/.bash_profile \
+    && echo 'export PATH="$PYENV_ROOT/bin:$PATH"' >> ~/.bash_profile \
+    && echo 'eval "$(pyenv init -)"' >> ~/.bash_profile
+
+# Install virtualenv
+RUN git clone https://github.com/yyuu/pyenv-virtualenv.git ~/.pyenv/plugins/pyenv-virtualenv \
+    && echo 'export PYENV_VIRTUALENV_DISABLE_PROMPT=1' >> ~/.bash_profile \
+    && echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bash_profile
+
 # Install python3.6.4
-# https://www.techtrekking.com/install-python-3-6-4-on-ubuntu-16-04/
-RUN wget https://www.python.org/ftp/python/3.6.4/Python-3.6.4.tar.xz \
-    && tar xvf Python-3.6.4.tar.xz \
-    && cd Python-3.6.4 \
-    && ./configure \
-    && make altinstall
+RUN bash && source ~/.bash_profile \
+    && pyenv install 3.6.4 \
+    && pyenv versions
+
+# Create virtualenv
+RUN bash && source ~/.bash_profile \
+    && pyenv virtualenv 3.6.4 py3.6.4
 
 # Install nvm with node and npm
 ENV NODE_VERSION=8.9.4 \
@@ -47,12 +62,6 @@ RUN curl https://raw.githubusercontent.com/creationix/nvm/v$NVM_VERSION/install.
     && nvm install $NODE_VERSION \
     && nvm alias default $NODE_VERSION \
     && nvm use default
-
-# Install aws-cli
-RUN pip install awscli --upgrade --user
-
-# Install managers
-RUN pip3.6 install zappa
 
 # Set node path
 ENV NODE_PATH=$NVM_DIR/v$NODE_VERSION/lib/node_modules
@@ -66,6 +75,13 @@ ENV LANG=C.UTF-8 \
 
 # Xvfb provide an in-memory X-session for tests that require a GUI
 ENV DISPLAY=:99
+
+# Install aws-cli
+RUN pip install awscli --upgrade --user
+
+# Install managers (on py3.6.4)
+RUN bash && source ~/.bash_profile && source ~/.pyenv/versions/3.6.4/envs/py3.6.4/bin/activate \
+    && pip install zappa
 
 # Set the path.
 ENV PATH=$NVM_DIR:$NVM_DIR/versions/node/v$NODE_VERSION/bin:$HOME/.local/bin:$PATH
